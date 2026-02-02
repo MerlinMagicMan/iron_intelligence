@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Dumbbell, Plus, Play, BarChart3, Brain, ChevronRight, X, Check, Timer, TrendingUp, Calendar, ChevronDown, Activity, Camera, Search, BookOpen, Download, ChevronLeft, Scale } from 'lucide-react';
+import { Dumbbell, Plus, Play, BarChart3, Brain, ChevronRight, X, Check, Timer, TrendingUp, Calendar, ChevronDown, Activity, Camera, Search, BookOpen, Download, ChevronLeft, Scale, LogOut, Mail } from 'lucide-react';
+import { supabase } from './supabase.js';
 
 const allExercises = [
   // Chest
@@ -595,6 +596,12 @@ const sampleCardioHistory = [
 const defaultPrograms = [gbrsProgram, gbrsMobility1, gbrsMobility2, bulletproofHips1, bulletproofHips2, bulletproofHips3, dailyMaintenance, deepTissue, specialOpsWarmup, specialOpsRunning];
 
 export default function App() {
+  const [session, setSession] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [authEmail, setAuthEmail] = useState('');
+  const [authMsg, setAuthMsg] = useState('');
+  const [authSending, setAuthSending] = useState(false);
+
   const [tab, setTab] = useState('dashboard');
   const [programs] = useState(defaultPrograms);
   const [history, setHistory] = useState([]);
@@ -606,52 +613,160 @@ export default function App() {
   const [restSec, setRestSec] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [storageStatus, setStorageStatus] = useState('loading');
+  const saveTimeout = useRef(null);
 
-  // Load data from persistent storage on mount
+  // Auth listener
   useEffect(() => {
-    const loadData = () => {
+    supabase.auth.getSession().then(({ data: { session: s } }) => {
+      setSession(s);
+      setAuthLoading(false);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+      setSession(s);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Send magic link
+  const sendMagicLink = async () => {
+    if (!authEmail.trim()) return;
+    setAuthSending(true);
+    setAuthMsg('');
+    const { error } = await supabase.auth.signInWithOtp({
+      email: authEmail.trim(),
+      options: { emailRedirectTo: window.location.origin }
+    });
+    setAuthSending(false);
+    if (error) setAuthMsg(error.message);
+    else setAuthMsg('Check your email for the login link!');
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setHistory([]);
+    setCardioHistory([]);
+    setBodyWeight([]);
+    setCustomExercises([]);
+    setSession(null);
+  };
+
+  // Load data from Supabase when session is available
+  useEffect(() => {
+    if (!session) { setIsLoading(false); return; }
+    const loadFromSupabase = async () => {
+      setIsLoading(true);
       try {
-        const saved = localStorage.getItem('iron-intelligence-data');
-        if (saved) {
-          const data = JSON.parse(saved);
-          setHistory(data.history || sampleHistory);
-          setCardioHistory(data.cardioHistory || sampleCardioHistory);
-          setBodyWeight(data.bodyWeight || []);
-          setCustomExercises(data.customExercises || []);
-          setStorageStatus('loaded');
+        const uid = session.user.id;
+        const [sh, ch, bw, ce] = await Promise.all([
+          supabase.from('strength_history').select('*').eq('user_id', uid).order('created_at', { ascending: false }),
+          supabase.from('cardio_history').select('*').eq('user_id', uid).order('created_at', { ascending: false }),
+          supabase.from('body_weight').select('*').eq('user_id', uid).order('created_at', { ascending: false }),
+          supabase.from('custom_exercises').select('*').eq('user_id', uid).order('created_at', { ascending: false }),
+        ]);
+        const strength = (sh.data || []).map(r => ({ date: r.date, exercise: r.exercise, sets: r.sets, _id: r.id }));
+        const cardio = (ch.data || []).map(r => ({ date: r.date, type: r.type, name: r.name, distance: r.distance, duration: r.duration, unit: r.unit, hr: r.hr, load: r.load, notes: r.notes, _id: r.id }));
+        const weight = (bw.data || []).map(r => ({ date: r.date, weight: r.weight, unit: r.unit, _id: r.id }));
+        const custom = (ce.data || []).map(r => ({ id: r.id, name: r.name, muscles: r.muscles, type: r.type, category: r.category }));
+
+        if (strength.length || cardio.length || weight.length || custom.length) {
+          setHistory(strength);
+          setCardioHistory(cardio);
+          setBodyWeight(weight);
+          setCustomExercises(custom);
+          setStorageStatus('saved');
         } else {
-          // First time user - load sample data
-          setHistory(sampleHistory);
-          setCardioHistory(sampleCardioHistory);
-          setStorageStatus('new');
+          // Check for localStorage data to migrate
+          try {
+            const saved = localStorage.getItem('iron-intelligence-data');
+            if (saved) {
+              const data = JSON.parse(saved);
+              if ((data.history && data.history.length) || (data.cardioHistory && data.cardioHistory.length)) {
+                setHistory(data.history || []);
+                setCardioHistory(data.cardioHistory || []);
+                setBodyWeight(data.bodyWeight || []);
+                setCustomExercises(data.customExercises || []);
+                setStorageStatus('migrating');
+                // Migrate data to Supabase
+                const promises = [];
+                (data.history || []).forEach(h => {
+                  promises.push(supabase.from('strength_history').insert({ user_id: uid, date: h.date, exercise: h.exercise, sets: h.sets }));
+                });
+                (data.cardioHistory || []).forEach(c => {
+                  promises.push(supabase.from('cardio_history').insert({ user_id: uid, date: c.date, type: c.type, name: c.name, distance: c.distance || 0, duration: c.duration || 0, unit: c.unit || 'mi', hr: c.hr, load: c.load, notes: c.notes }));
+                });
+                (data.bodyWeight || []).forEach(bw => {
+                  promises.push(supabase.from('body_weight').insert({ user_id: uid, date: bw.date, weight: bw.weight, unit: bw.unit || 'lbs' }));
+                });
+                (data.customExercises || []).forEach(ce => {
+                  promises.push(supabase.from('custom_exercises').insert({ user_id: uid, name: ce.name, muscles: ce.muscles, type: ce.type, category: ce.category }));
+                });
+                await Promise.all(promises);
+                localStorage.removeItem('iron-intelligence-data');
+                setStorageStatus('saved');
+              } else {
+                setStorageStatus('new');
+              }
+            } else {
+              setStorageStatus('new');
+            }
+          } catch (e) {
+            setStorageStatus('new');
+          }
         }
-      } catch (error) {
-        console.log('Storage not available, using sample data');
-        setHistory(sampleHistory);
-        setCardioHistory(sampleCardioHistory);
+      } catch (err) {
+        console.log('Error loading from Supabase', err);
         setStorageStatus('unavailable');
       }
       setIsLoading(false);
     };
-    loadData();
-  }, []);
+    loadFromSupabase();
+  }, [session]);
 
-  // Save data whenever history or cardioHistory changes
+  // Save helpers — write individual records to Supabase
+  const syncStrengthAdd = async (entry) => {
+    if (!session) return;
+    await supabase.from('strength_history').insert({ user_id: session.user.id, date: entry.date, exercise: entry.exercise, sets: entry.sets });
+  };
+  const syncCardioAdd = async (entry) => {
+    if (!session) return;
+    await supabase.from('cardio_history').insert({ user_id: session.user.id, date: entry.date, type: entry.type, name: entry.name, distance: entry.distance || 0, duration: entry.duration || 0, unit: entry.unit || 'mi', hr: entry.hr, load: entry.load, notes: entry.notes });
+  };
+  const syncBodyWeightAdd = async (entry) => {
+    if (!session) return;
+    await supabase.from('body_weight').insert({ user_id: session.user.id, date: entry.date, weight: entry.weight, unit: entry.unit || 'lbs' });
+  };
+  const syncCustomExerciseAdd = async (entry) => {
+    if (!session) return;
+    await supabase.from('custom_exercises').insert({ user_id: session.user.id, name: entry.name, muscles: entry.muscles, type: entry.type, category: entry.category });
+  };
+
+  // Wrapped setters that also sync to Supabase
+  const addHistory = (entry) => {
+    setHistory(prev => [entry, ...prev]);
+    syncStrengthAdd(entry);
+  };
+  const addCardio = (entry) => {
+    setCardioHistory(prev => [entry, ...prev]);
+    syncCardioAdd(entry);
+  };
+  const addBodyWeight = (entry) => {
+    setBodyWeight(prev => [entry, ...prev]);
+    syncBodyWeightAdd(entry);
+  };
+  const addCustomExercise = (entry) => {
+    setCustomExercises(prev => [...prev, entry]);
+    syncCustomExerciseAdd(entry);
+  };
+
+  // Also keep localStorage as offline cache
   useEffect(() => {
-    if (isLoading) return; // Don't save while loading
+    if (isLoading) return;
     try {
       localStorage.setItem('iron-intelligence-data', JSON.stringify({
-        history,
-        cardioHistory,
-        bodyWeight,
-        customExercises,
+        history, cardioHistory, bodyWeight, customExercises,
         lastSaved: new Date().toISOString()
       }));
-      setStorageStatus('saved');
-    } catch (error) {
-      console.log('Could not save to storage');
-      setStorageStatus('unavailable');
-    }
+    } catch (e) {}
   }, [history, cardioHistory, bodyWeight, customExercises, isLoading]);
 
   const startProgramWorkout = (program, dayIndex) => {
@@ -667,15 +782,22 @@ export default function App() {
   };
 
   // Reset all data
-  const resetData = () => {
+  const resetData = async () => {
     if (confirm('Are you sure you want to reset all your workout data? This cannot be undone.')) {
-      setHistory(sampleHistory);
-      setCardioHistory(sampleCardioHistory);
+      setHistory([]);
+      setCardioHistory([]);
       setBodyWeight([]);
       setCustomExercises([]);
-      try {
-        localStorage.removeItem('iron-intelligence-data');
-      } catch (e) {}
+      try { localStorage.removeItem('iron-intelligence-data'); } catch (e) {}
+      if (session) {
+        const uid = session.user.id;
+        await Promise.all([
+          supabase.from('strength_history').delete().eq('user_id', uid),
+          supabase.from('cardio_history').delete().eq('user_id', uid),
+          supabase.from('body_weight').delete().eq('user_id', uid),
+          supabase.from('custom_exercises').delete().eq('user_id', uid),
+        ]);
+      }
     }
   };
 
@@ -687,7 +809,6 @@ export default function App() {
   const startExerciseWorkout = (ex) => {
     setWorkout({ started: Date.now() });
     setTab('workout');
-    // The workout logger will handle the free-form flow
   };
 
   const tabs = [
@@ -699,6 +820,47 @@ export default function App() {
     { id: 'camera', icon: Camera, label: 'Camera' },
     { id: 'ai', icon: Brain, label: 'AI' },
   ];
+
+  // Auth loading
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center">
+        <div className="text-center">
+          <Dumbbell className="w-12 h-12 mx-auto mb-4 text-violet-400 animate-pulse" />
+          <p className="text-gray-400">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Login screen
+  if (!session) {
+    return (
+      <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center p-4">
+        <div className="w-full max-w-sm space-y-6">
+          <div className="text-center">
+            <Dumbbell className="w-16 h-16 mx-auto mb-4 text-violet-400" />
+            <h1 className="text-3xl font-bold">Iron Intelligence</h1>
+            <p className="text-gray-400 mt-1">GBRS Performance System</p>
+          </div>
+          <div className="bg-gray-900 rounded-2xl p-6 border border-gray-800 space-y-4">
+            <h2 className="font-bold text-center">Sign In</h2>
+            <p className="text-xs text-gray-400 text-center">Enter your email and we'll send you a magic link</p>
+            <div>
+              <label className="text-xs text-gray-400">Email</label>
+              <input type="email" value={authEmail} onChange={e => setAuthEmail(e.target.value)} onKeyDown={e => e.key === 'Enter' && sendMagicLink()} placeholder="you@example.com" className="w-full bg-gray-800 rounded-lg p-3 mt-1 text-sm" />
+            </div>
+            <button onClick={sendMagicLink} disabled={authSending || !authEmail.trim()} className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 rounded-lg p-3 font-medium flex items-center justify-center gap-2 disabled:opacity-50">
+              {authSending ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Mail className="w-4 h-4" />}
+              {authSending ? 'Sending...' : 'Send Magic Link'}
+            </button>
+            {authMsg && <p className={`text-xs text-center ${authMsg.includes('Check') ? 'text-emerald-400' : 'text-red-400'}`}>{authMsg}</p>}
+          </div>
+          <p className="text-xs text-gray-600 text-center">Your data syncs across all your devices</p>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -726,10 +888,10 @@ export default function App() {
         </div>
       </div>
       <div className="pb-20">
-        {tab === 'dashboard' && <Dashboard history={history} cardioHistory={cardioHistory} resetData={resetData} storageStatus={storageStatus} bodyWeight={bodyWeight} setBodyWeight={setBodyWeight} />}
-        {tab === 'workout' && <WorkoutLogger workout={workout} setWorkout={setWorkout} history={history} setHistory={setHistory} restTimer={restTimer} setRestTimer={setRestTimer} restSec={restSec} setRestSec={setRestSec} customExercises={customExercises} />}
-        {tab === 'cardio' && <CardioLogger cardioHistory={cardioHistory} setCardioHistory={setCardioHistory} />}
-        {tab === 'library' && <ExerciseLibrary history={history} onStartWorkout={startExerciseWorkout} customExercises={customExercises} setCustomExercises={setCustomExercises} />}
+        {tab === 'dashboard' && <Dashboard history={history} cardioHistory={cardioHistory} resetData={resetData} storageStatus={storageStatus} bodyWeight={bodyWeight} addBodyWeight={addBodyWeight} handleLogout={handleLogout} userEmail={session.user.email} />}
+        {tab === 'workout' && <WorkoutLogger workout={workout} setWorkout={setWorkout} history={history} addHistory={addHistory} setHistory={setHistory} restTimer={restTimer} setRestTimer={setRestTimer} restSec={restSec} setRestSec={setRestSec} customExercises={customExercises} />}
+        {tab === 'cardio' && <CardioLogger cardioHistory={cardioHistory} addCardio={addCardio} setCardioHistory={setCardioHistory} />}
+        {tab === 'library' && <ExerciseLibrary history={history} onStartWorkout={startExerciseWorkout} customExercises={customExercises} addCustomExercise={addCustomExercise} setCustomExercises={setCustomExercises} />}
         {tab === 'programs' && <Programs programs={programs} startProgramWorkout={startProgramWorkout} />}
         {tab === 'camera' && <CameraModule />}
         {tab === 'ai' && <AICoach history={history} cardioHistory={cardioHistory} />}
@@ -747,7 +909,7 @@ export default function App() {
   );
 }
 
-function Dashboard({ history, cardioHistory, resetData, storageStatus, bodyWeight, setBodyWeight }) {
+function Dashboard({ history, cardioHistory, resetData, storageStatus, bodyWeight, addBodyWeight, handleLogout, userEmail }) {
   const totalVol = history.reduce((a, h) => a + h.sets.reduce((s, x) => s + x.w * x.r, 0), 0);
   const prs = {}; history.forEach(h => { const m = Math.max(...h.sets.map(s => s.w)); if (!prs[h.exercise] || m > prs[h.exercise]) prs[h.exercise] = m; });
   const weekVol = [12500, 14200, 13800, 15600, 14900, 16200, 15800];
@@ -783,7 +945,7 @@ function Dashboard({ history, cardioHistory, resetData, storageStatus, bodyWeigh
   const logWeight = () => {
     const w = parseFloat(weightInput);
     if (!w) return;
-    setBodyWeight([{ date: new Date().toISOString().split('T')[0], weight: w, unit: 'lbs' }, ...bodyWeight]);
+    addBodyWeight({ date: new Date().toISOString().split('T')[0], weight: w, unit: 'lbs' });
     setWeightInput('');
   };
 
@@ -965,24 +1127,24 @@ function Dashboard({ history, cardioHistory, resetData, storageStatus, bodyWeigh
       </div>
 
       {/* Settings Section */}
-      <div className="bg-gray-900 rounded-xl p-4 border border-gray-800">
-        <h3 className="text-sm text-gray-400 mb-3">Settings</h3>
-        <button onClick={exportCSV} className="w-full bg-violet-600/20 text-violet-400 rounded-lg p-3 border border-violet-600/30 text-sm mb-2 flex items-center justify-center gap-2">
+      <div className="bg-gray-900 rounded-xl p-4 border border-gray-800 space-y-3">
+        <h3 className="text-sm text-gray-400 mb-1">Account</h3>
+        {userEmail && <p className="text-xs text-gray-500">{userEmail}</p>}
+        <button onClick={exportCSV} className="w-full bg-violet-600/20 text-violet-400 rounded-lg p-3 border border-violet-600/30 text-sm flex items-center justify-center gap-2">
           <Download className="w-4 h-4" />Export Data to CSV
         </button>
-        <button
-          onClick={resetData}
-          className="w-full bg-red-600/20 text-red-400 rounded-lg p-3 border border-red-600/30 text-sm"
-        >
+        <button onClick={resetData} className="w-full bg-red-600/20 text-red-400 rounded-lg p-3 border border-red-600/30 text-sm">
           Reset All Data
         </button>
-        <p className="text-xs text-gray-500 mt-2 text-center">This will clear all your workout and cardio history</p>
+        <button onClick={handleLogout} className="w-full bg-gray-800 text-gray-400 rounded-lg p-3 text-sm flex items-center justify-center gap-2">
+          <LogOut className="w-4 h-4" />Sign Out
+        </button>
       </div>
     </div>
   );
 }
 
-function WorkoutLogger({ workout, setWorkout, history, setHistory, restTimer, setRestTimer, restSec, setRestSec, customExercises = [] }) {
+function WorkoutLogger({ workout, setWorkout, history, addHistory, setHistory, restTimer, setRestTimer, restSec, setRestSec, customExercises = [] }) {
   const [curEx, setCurEx] = useState(null);
   const [sets, setSets] = useState([]);
   const [showList, setShowList] = useState(false);
@@ -993,7 +1155,7 @@ function WorkoutLogger({ workout, setWorkout, history, setHistory, restTimer, se
   
   const logEx = () => { 
     if (curEx && sets.length) { 
-      setHistory([{date: new Date().toISOString().split('T')[0], exercise: curEx.name || curEx.exercise, sets: sets.map(s => ({w:s.weight,r:s.reps,rpe:s.rpe}))}, ...history]); 
+      addHistory({date: new Date().toISOString().split('T')[0], exercise: curEx.name || curEx.exercise, sets: sets.map(s => ({w:s.weight,r:s.reps,rpe:s.rpe}))});
       if (workout?.exercises) {
         const updated = {...workout};
         updated.exercises[workout.currentExerciseIndex].completed = true;
@@ -1205,7 +1367,7 @@ function Programs({ programs, startProgramWorkout }) {
   );
 }
 
-function CardioLogger({ cardioHistory, setCardioHistory }) {
+function CardioLogger({ cardioHistory, addCardio, setCardioHistory }) {
   const [logging, setLogging] = useState(false);
   const [activeSession, setActiveSession] = useState(null);
   const [elapsed, setElapsed] = useState(0);
@@ -1235,7 +1397,7 @@ function CardioLogger({ cardioHistory, setCardioHistory }) {
   const calcPace = (dist, mins) => { if (!dist || !mins) return null; const pace = mins / dist; return `${Math.floor(pace)}:${Math.round((pace - Math.floor(pace)) * 60).toString().padStart(2,'0')}`; };
   const startLiveSession = (type) => { setActiveSession({ type }); setElapsed(0); };
   const endLiveSession = () => { const type = cardioTypes.find(t => t.id === activeSession.type); setForm({...form, type: activeSession.type, name: type?.name || '', duration: Math.round(elapsed / 60).toString()}); setActiveSession(null); setLogging(true); };
-  const saveCardio = () => { setCardioHistory([{ date: new Date().toISOString().split('T')[0], type: form.type, name: form.name || cardioTypes.find(t => t.id === form.type)?.name, distance: parseFloat(form.distance) || 0, duration: parseInt(form.duration) || 0, unit: form.unit, hr: parseInt(form.hr) || null, load: parseInt(form.load) || null, notes: form.notes }, ...cardioHistory]); setForm({ type: 'run', name: '', distance: '', duration: '', unit: 'mi', hr: '', load: '', notes: '' }); setLogging(false); };
+  const saveCardio = () => { addCardio({ date: new Date().toISOString().split('T')[0], type: form.type, name: form.name || cardioTypes.find(t => t.id === form.type)?.name, distance: parseFloat(form.distance) || 0, duration: parseInt(form.duration) || 0, unit: form.unit, hr: parseInt(form.hr) || null, load: parseInt(form.load) || null, notes: form.notes }); setForm({ type: 'run', name: '', distance: '', duration: '', unit: 'mi', hr: '', load: '', notes: '' }); setLogging(false); };
   const currentType = cardioTypes.find(t => t.id === form.type);
 
   if (activeSession) {
@@ -1304,7 +1466,7 @@ function CardioLogger({ cardioHistory, setCardioHistory }) {
   );
 }
 
-function ExerciseLibrary({ history, onStartWorkout, customExercises, setCustomExercises }) {
+function ExerciseLibrary({ history, onStartWorkout, customExercises, addCustomExercise, setCustomExercises }) {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('All');
   const [expanded, setExpanded] = useState(null);
@@ -1336,7 +1498,7 @@ function ExerciseLibrary({ history, onStartWorkout, customExercises, setCustomEx
     if (!newEx.name.trim()) return;
     const id = 'custom-' + Date.now();
     const muscles = newEx.muscles.split(',').map(m => m.trim()).filter(Boolean);
-    setCustomExercises([...customExercises, { id, name: newEx.name.trim(), muscles, type: newEx.type, category: newEx.category }]);
+    addCustomExercise({ id, name: newEx.name.trim(), muscles, type: newEx.type, category: newEx.category });
     setNewEx({ name: '', muscles: '', category: 'chest', type: 'strength' });
     setShowCreate(false);
   };
