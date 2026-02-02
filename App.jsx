@@ -1,19 +1,123 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Dumbbell, Plus, Play, BarChart3, Brain, ChevronRight, X, Check, Timer, TrendingUp, Calendar, ChevronDown, Activity, Camera } from 'lucide-react';
+import { Dumbbell, Plus, Play, BarChart3, Brain, ChevronRight, X, Check, Timer, TrendingUp, Calendar, ChevronDown, Activity, Camera, Search, BookOpen, Download, ChevronLeft, Scale } from 'lucide-react';
 
 const allExercises = [
-  { id: 'squat', name: 'Back Squat', muscles: ['quads', 'glutes'], type: 'strength' },
-  { id: 'trapbar', name: 'Trap Bar Deadlift', muscles: ['back', 'glutes'], type: 'strength' },
-  { id: 'bench', name: 'Barbell Bench Press', muscles: ['chest', 'triceps'], type: 'strength' },
-  { id: 'ohp', name: 'Overhead Press', muscles: ['shoulders'], type: 'strength' },
-  { id: 'pullup', name: 'Strict Pull-Ups', muscles: ['back', 'biceps'], type: 'strength' },
-  { id: 'row', name: 'Barbell Row', muscles: ['back'], type: 'strength' },
-  { id: 'splitquat', name: 'Bulgarian Split Squat', muscles: ['quads', 'glutes'], type: 'strength' },
-  { id: 'rdl', name: 'Staggered Stance RDL', muscles: ['hamstrings'], type: 'strength' },
-  { id: 'curl', name: 'Barbell Curl', muscles: ['biceps'], type: 'hypertrophy' },
-  { id: 'pushdown', name: 'Tricep Pushdown', muscles: ['triceps'], type: 'hypertrophy' },
-  { id: 'facepull', name: 'Face Pulls', muscles: ['rear delts'], type: 'hypertrophy' },
+  // Chest
+  { id: 'bench', name: 'Barbell Bench Press', muscles: ['chest', 'triceps'], type: 'strength', category: 'chest' },
+  { id: 'incline-bench', name: 'Incline Bench Press', muscles: ['upper chest', 'triceps'], type: 'strength', category: 'chest' },
+  { id: 'db-bench', name: 'Dumbbell Bench Press', muscles: ['chest', 'triceps'], type: 'strength', category: 'chest' },
+  { id: 'db-incline', name: 'DB Incline Press', muscles: ['upper chest', 'triceps'], type: 'strength', category: 'chest' },
+  { id: 'cable-fly', name: 'Cable Fly', muscles: ['chest'], type: 'hypertrophy', category: 'chest' },
+  { id: 'dips', name: 'Dips', muscles: ['chest', 'triceps'], type: 'strength', category: 'chest' },
+  { id: 'pushups', name: 'Push-Ups', muscles: ['chest', 'triceps'], type: 'strength', category: 'chest' },
+  { id: 'machine-chest', name: 'Machine Chest Press', muscles: ['chest'], type: 'hypertrophy', category: 'chest' },
+  { id: 'decline-bench', name: 'Decline Bench Press', muscles: ['lower chest', 'triceps'], type: 'strength', category: 'chest' },
+  { id: 'pec-deck', name: 'Pec Deck', muscles: ['chest'], type: 'hypertrophy', category: 'chest' },
+  { id: 'weighted-pushups', name: 'Weighted Push-Ups', muscles: ['chest', 'triceps'], type: 'strength', category: 'chest' },
+  { id: 'close-grip-bench', name: 'Close Grip Bench', muscles: ['triceps', 'chest'], type: 'strength', category: 'chest' },
+  // Back
+  { id: 'row', name: 'Barbell Row', muscles: ['back', 'biceps'], type: 'strength', category: 'back' },
+  { id: 'pullup', name: 'Strict Pull-Ups', muscles: ['back', 'biceps'], type: 'strength', category: 'back' },
+  { id: 'lat-pulldown', name: 'Lat Pulldown', muscles: ['lats', 'biceps'], type: 'hypertrophy', category: 'back' },
+  { id: 'cable-row', name: 'Seated Cable Row', muscles: ['back', 'biceps'], type: 'hypertrophy', category: 'back' },
+  { id: 'tbar-row', name: 'T-Bar Row', muscles: ['back'], type: 'strength', category: 'back' },
+  { id: 'db-row', name: 'Dumbbell Row', muscles: ['back', 'biceps'], type: 'strength', category: 'back' },
+  { id: 'inverted-row', name: 'Inverted Row', muscles: ['back', 'biceps'], type: 'strength', category: 'back' },
+  { id: 'chest-supported-row', name: 'Chest Supported Row', muscles: ['back'], type: 'hypertrophy', category: 'back' },
+  { id: 'meadows-row', name: 'Meadows Row', muscles: ['back', 'rear delts'], type: 'hypertrophy', category: 'back' },
+  { id: 'straight-arm-pd', name: 'Straight Arm Pulldown', muscles: ['lats'], type: 'hypertrophy', category: 'back' },
+  { id: 'trapbar', name: 'Trap Bar Deadlift', muscles: ['back', 'glutes', 'quads'], type: 'strength', category: 'back' },
+  { id: 'conv-deadlift', name: 'Conventional Deadlift', muscles: ['back', 'glutes', 'hamstrings'], type: 'strength', category: 'back' },
+  { id: 'sumo-deadlift', name: 'Sumo Deadlift', muscles: ['back', 'glutes', 'quads'], type: 'strength', category: 'back' },
+  // Shoulders
+  { id: 'ohp', name: 'Overhead Press', muscles: ['shoulders', 'triceps'], type: 'strength', category: 'shoulders' },
+  { id: 'db-shoulder', name: 'DB Shoulder Press', muscles: ['shoulders'], type: 'strength', category: 'shoulders' },
+  { id: 'lateral-raise', name: 'Lateral Raise', muscles: ['side delts'], type: 'hypertrophy', category: 'shoulders' },
+  { id: 'front-raise', name: 'Front Raise', muscles: ['front delts'], type: 'hypertrophy', category: 'shoulders' },
+  { id: 'facepull', name: 'Face Pulls', muscles: ['rear delts', 'upper back'], type: 'hypertrophy', category: 'shoulders' },
+  { id: 'reverse-fly', name: 'Reverse Fly', muscles: ['rear delts'], type: 'hypertrophy', category: 'shoulders' },
+  { id: 'arnold-press', name: 'Arnold Press', muscles: ['shoulders'], type: 'hypertrophy', category: 'shoulders' },
+  { id: 'upright-row', name: 'Upright Row', muscles: ['shoulders', 'traps'], type: 'hypertrophy', category: 'shoulders' },
+  { id: 'cable-lateral', name: 'Cable Lateral Raise', muscles: ['side delts'], type: 'hypertrophy', category: 'shoulders' },
+  { id: 'landmine-press', name: 'Landmine Press', muscles: ['shoulders', 'chest'], type: 'strength', category: 'shoulders' },
+  { id: 'powell-raise', name: 'Powell Raise', muscles: ['rear delts'], type: 'hypertrophy', category: 'shoulders' },
+  // Legs
+  { id: 'squat', name: 'Back Squat', muscles: ['quads', 'glutes'], type: 'strength', category: 'legs' },
+  { id: 'front-squat', name: 'Front Squat', muscles: ['quads', 'core'], type: 'strength', category: 'legs' },
+  { id: 'splitquat', name: 'Bulgarian Split Squat', muscles: ['quads', 'glutes'], type: 'strength', category: 'legs' },
+  { id: 'lunges', name: 'Lunges', muscles: ['quads', 'glutes'], type: 'strength', category: 'legs' },
+  { id: 'walking-lunges', name: 'Walking Lunges', muscles: ['quads', 'glutes'], type: 'strength', category: 'legs' },
+  { id: 'leg-press', name: 'Leg Press', muscles: ['quads', 'glutes'], type: 'strength', category: 'legs' },
+  { id: 'leg-curl', name: 'Leg Curl', muscles: ['hamstrings'], type: 'hypertrophy', category: 'legs' },
+  { id: 'leg-ext', name: 'Leg Extension', muscles: ['quads'], type: 'hypertrophy', category: 'legs' },
+  { id: 'rdl', name: 'Romanian Deadlift', muscles: ['hamstrings', 'glutes'], type: 'strength', category: 'legs' },
+  { id: 'staggered-rdl', name: 'Staggered Stance RDL', muscles: ['hamstrings', 'glutes'], type: 'strength', category: 'legs' },
+  { id: 'single-leg-rdl', name: 'Single Leg RDL', muscles: ['hamstrings', 'glutes'], type: 'strength', category: 'legs' },
+  { id: 'hip-thrust', name: 'Hip Thrust', muscles: ['glutes', 'hamstrings'], type: 'strength', category: 'legs' },
+  { id: 'calf-raise', name: 'Calf Raise', muscles: ['calves'], type: 'hypertrophy', category: 'legs' },
+  { id: 'goblet-squat', name: 'Goblet Squat', muscles: ['quads', 'glutes'], type: 'strength', category: 'legs' },
+  { id: 'hack-squat', name: 'Hack Squat', muscles: ['quads'], type: 'strength', category: 'legs' },
+  { id: 'step-ups', name: 'Step Ups', muscles: ['quads', 'glutes'], type: 'strength', category: 'legs' },
+  { id: 'db-lateral-lunge', name: 'DB Lateral Lunge', muscles: ['quads', 'adductors'], type: 'strength', category: 'legs' },
+  { id: 'sissy-squat', name: 'Sissy Squat', muscles: ['quads'], type: 'hypertrophy', category: 'legs' },
+  { id: 'nordic-curl', name: 'Nordic Curl', muscles: ['hamstrings'], type: 'strength', category: 'legs' },
+  { id: 'cossack-squat', name: 'Cossack Squat', muscles: ['quads', 'adductors'], type: 'strength', category: 'legs' },
+  // Arms
+  { id: 'curl', name: 'Barbell Curl', muscles: ['biceps'], type: 'hypertrophy', category: 'arms' },
+  { id: 'db-curl', name: 'Dumbbell Curl', muscles: ['biceps'], type: 'hypertrophy', category: 'arms' },
+  { id: 'hammer-curl', name: 'Hammer Curl', muscles: ['biceps', 'forearms'], type: 'hypertrophy', category: 'arms' },
+  { id: 'preacher-curl', name: 'Preacher Curl', muscles: ['biceps'], type: 'hypertrophy', category: 'arms' },
+  { id: 'cable-curl', name: 'Cable Curl', muscles: ['biceps'], type: 'hypertrophy', category: 'arms' },
+  { id: 'pushdown', name: 'Tricep Pushdown', muscles: ['triceps'], type: 'hypertrophy', category: 'arms' },
+  { id: 'overhead-ext', name: 'Overhead Tricep Extension', muscles: ['triceps'], type: 'hypertrophy', category: 'arms' },
+  { id: 'skull-crushers', name: 'Skull Crushers', muscles: ['triceps'], type: 'hypertrophy', category: 'arms' },
+  { id: 'concentration-curl', name: 'Concentration Curl', muscles: ['biceps'], type: 'hypertrophy', category: 'arms' },
+  { id: 'ez-curl', name: 'EZ Bar Curl', muscles: ['biceps'], type: 'hypertrophy', category: 'arms' },
+  { id: 'tricep-kickback', name: 'Tricep Kickback', muscles: ['triceps'], type: 'hypertrophy', category: 'arms' },
+  { id: 'cable-overhead-ext', name: 'Cable Overhead Extension', muscles: ['triceps'], type: 'hypertrophy', category: 'arms' },
+  { id: 'reverse-curl', name: 'Reverse Curl', muscles: ['forearms', 'biceps'], type: 'hypertrophy', category: 'arms' },
+  { id: 'wrist-curl', name: 'Wrist Curl', muscles: ['forearms'], type: 'hypertrophy', category: 'arms' },
+  { id: 'reverse-wrist-curl', name: 'Reverse Wrist Curl', muscles: ['forearms'], type: 'hypertrophy', category: 'arms' },
+  // Core
+  { id: 'plank', name: 'Plank', muscles: ['core'], type: 'strength', category: 'core' },
+  { id: 'hanging-leg-raise', name: 'Hanging Leg Raise', muscles: ['core', 'hip flexors'], type: 'strength', category: 'core' },
+  { id: 'ab-wheel', name: 'Ab Wheel Rollout', muscles: ['core'], type: 'strength', category: 'core' },
+  { id: 'cable-crunch', name: 'Cable Crunch', muscles: ['core'], type: 'hypertrophy', category: 'core' },
+  { id: 'russian-twist', name: 'Russian Twist', muscles: ['obliques'], type: 'hypertrophy', category: 'core' },
+  { id: 'dead-bug', name: 'Dead Bug', muscles: ['core'], type: 'strength', category: 'core' },
+  { id: 'pallof-press', name: 'Pallof Press', muscles: ['core', 'obliques'], type: 'strength', category: 'core' },
+  { id: 'side-plank', name: 'Side Plank', muscles: ['obliques'], type: 'strength', category: 'core' },
+  { id: 'v-ups', name: 'V-Ups', muscles: ['core'], type: 'hypertrophy', category: 'core' },
+  { id: 'bicycle-crunch', name: 'Bicycle Crunch', muscles: ['core', 'obliques'], type: 'hypertrophy', category: 'core' },
+  { id: 'decline-situp', name: 'Decline Sit-Up', muscles: ['core'], type: 'hypertrophy', category: 'core' },
+  { id: 'dragon-flag', name: 'Dragon Flag', muscles: ['core'], type: 'strength', category: 'core' },
+  // Conditioning
+  { id: 'sled-push', name: 'Sled Push', muscles: ['quads', 'glutes'], type: 'conditioning', category: 'conditioning' },
+  { id: 'battle-ropes', name: 'Battle Ropes', muscles: ['shoulders', 'core'], type: 'conditioning', category: 'conditioning' },
+  { id: 'box-jump', name: 'Box Jump', muscles: ['quads', 'glutes'], type: 'conditioning', category: 'conditioning' },
+  { id: 'kb-swing', name: 'Kettlebell Swing', muscles: ['glutes', 'hamstrings', 'core'], type: 'conditioning', category: 'conditioning' },
+  { id: 'burpees', name: 'Burpees', muscles: ['full body'], type: 'conditioning', category: 'conditioning' },
+  { id: 'ball-slam', name: 'Ball Slam', muscles: ['core', 'shoulders'], type: 'conditioning', category: 'conditioning' },
+  { id: 'farmers-carry', name: 'Farmers Carry', muscles: ['grip', 'core', 'traps'], type: 'conditioning', category: 'conditioning' },
+  { id: 'suitcase-carry', name: 'Suitcase Carry', muscles: ['core', 'grip'], type: 'conditioning', category: 'conditioning' },
+  { id: 'prowler-push', name: 'Prowler Push', muscles: ['quads', 'glutes'], type: 'conditioning', category: 'conditioning' },
+  { id: 'tire-flip', name: 'Tire Flip', muscles: ['full body'], type: 'conditioning', category: 'conditioning' },
+  // Mobility
+  { id: 'hip-cars', name: 'Hip CARs', muscles: ['hips'], type: 'mobility', category: 'mobility' },
+  { id: 'tspine-rot', name: 'T-Spine Rotation', muscles: ['thoracic spine'], type: 'mobility', category: 'mobility' },
+  { id: 'worlds-greatest', name: "World's Greatest Stretch", muscles: ['hips', 'thoracic spine'], type: 'mobility', category: 'mobility' },
+  { id: 'couch-stretch', name: 'Couch Stretch', muscles: ['hip flexors', 'quads'], type: 'mobility', category: 'mobility' },
+  { id: 'pigeon-stretch', name: 'Pigeon Stretch', muscles: ['glutes', 'hips'], type: 'mobility', category: 'mobility' },
+  { id: 'shoulder-dislocates', name: 'Shoulder Dislocates', muscles: ['shoulders'], type: 'mobility', category: 'mobility' },
+  { id: 'ankle-mob', name: 'Ankle Mobilization', muscles: ['ankles'], type: 'mobility', category: 'mobility' },
+  { id: 'cat-cow', name: 'Cat Cow', muscles: ['spine'], type: 'mobility', category: 'mobility' },
+  { id: 'band-pull-apart', name: 'Band Pull Apart', muscles: ['rear delts', 'upper back'], type: 'mobility', category: 'mobility' },
+  { id: 'foam-roll', name: 'Foam Rolling', muscles: ['full body'], type: 'mobility', category: 'mobility' },
+  { id: 'shin-box', name: 'Shin Box Rotation', muscles: ['hips'], type: 'mobility', category: 'mobility' },
+  { id: 'adductor-rock', name: 'Adductor Rock', muscles: ['adductors', 'hips'], type: 'mobility', category: 'mobility' },
 ];
+
+const exerciseCategories = ['All', 'Chest', 'Back', 'Shoulders', 'Legs', 'Arms', 'Core', 'Conditioning', 'Mobility'];
 
 const gbrsProgram = {
   id: 999, name: 'GBRS Human Performance', style: 'tactical',
@@ -495,6 +599,8 @@ export default function App() {
   const [programs] = useState(defaultPrograms);
   const [history, setHistory] = useState([]);
   const [cardioHistory, setCardioHistory] = useState([]);
+  const [bodyWeight, setBodyWeight] = useState([]);
+  const [customExercises, setCustomExercises] = useState([]);
   const [workout, setWorkout] = useState(null);
   const [restTimer, setRestTimer] = useState(null);
   const [restSec, setRestSec] = useState(0);
@@ -510,6 +616,8 @@ export default function App() {
           const data = JSON.parse(saved);
           setHistory(data.history || sampleHistory);
           setCardioHistory(data.cardioHistory || sampleCardioHistory);
+          setBodyWeight(data.bodyWeight || []);
+          setCustomExercises(data.customExercises || []);
           setStorageStatus('loaded');
         } else {
           // First time user - load sample data
@@ -535,6 +643,8 @@ export default function App() {
       localStorage.setItem('iron-intelligence-data', JSON.stringify({
         history,
         cardioHistory,
+        bodyWeight,
+        customExercises,
         lastSaved: new Date().toISOString()
       }));
       setStorageStatus('saved');
@@ -542,7 +652,7 @@ export default function App() {
       console.log('Could not save to storage');
       setStorageStatus('unavailable');
     }
-  }, [history, cardioHistory, isLoading]);
+  }, [history, cardioHistory, bodyWeight, customExercises, isLoading]);
 
   const startProgramWorkout = (program, dayIndex) => {
     const day = program.fullDays[dayIndex];
@@ -561,6 +671,8 @@ export default function App() {
     if (confirm('Are you sure you want to reset all your workout data? This cannot be undone.')) {
       setHistory(sampleHistory);
       setCardioHistory(sampleCardioHistory);
+      setBodyWeight([]);
+      setCustomExercises([]);
       try {
         localStorage.removeItem('iron-intelligence-data');
       } catch (e) {}
@@ -572,10 +684,17 @@ export default function App() {
     return () => clearInterval(i);
   }, [restTimer]);
 
+  const startExerciseWorkout = (ex) => {
+    setWorkout({ started: Date.now() });
+    setTab('workout');
+    // The workout logger will handle the free-form flow
+  };
+
   const tabs = [
     { id: 'dashboard', icon: BarChart3, label: 'Dashboard' },
     { id: 'workout', icon: Dumbbell, label: 'Strength' },
     { id: 'cardio', icon: Activity, label: 'Cardio' },
+    { id: 'library', icon: BookOpen, label: 'Library' },
     { id: 'programs', icon: Calendar, label: 'Programs' },
     { id: 'camera', icon: Camera, label: 'Camera' },
     { id: 'ai', icon: Brain, label: 'AI' },
@@ -607,9 +726,10 @@ export default function App() {
         </div>
       </div>
       <div className="pb-20">
-        {tab === 'dashboard' && <Dashboard history={history} cardioHistory={cardioHistory} resetData={resetData} storageStatus={storageStatus} />}
-        {tab === 'workout' && <WorkoutLogger workout={workout} setWorkout={setWorkout} history={history} setHistory={setHistory} restTimer={restTimer} setRestTimer={setRestTimer} restSec={restSec} setRestSec={setRestSec} />}
+        {tab === 'dashboard' && <Dashboard history={history} cardioHistory={cardioHistory} resetData={resetData} storageStatus={storageStatus} bodyWeight={bodyWeight} setBodyWeight={setBodyWeight} />}
+        {tab === 'workout' && <WorkoutLogger workout={workout} setWorkout={setWorkout} history={history} setHistory={setHistory} restTimer={restTimer} setRestTimer={setRestTimer} restSec={restSec} setRestSec={setRestSec} customExercises={customExercises} />}
         {tab === 'cardio' && <CardioLogger cardioHistory={cardioHistory} setCardioHistory={setCardioHistory} />}
+        {tab === 'library' && <ExerciseLibrary history={history} onStartWorkout={startExerciseWorkout} customExercises={customExercises} setCustomExercises={setCustomExercises} />}
         {tab === 'programs' && <Programs programs={programs} startProgramWorkout={startProgramWorkout} />}
         {tab === 'camera' && <CameraModule />}
         {tab === 'ai' && <AICoach history={history} cardioHistory={cardioHistory} />}
@@ -617,8 +737,8 @@ export default function App() {
       <div className="fixed bottom-0 left-0 right-0 bg-gray-900 border-t border-gray-800">
         <div className="flex justify-around py-2">
           {tabs.map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)} className={`flex flex-col items-center p-2 ${tab === t.id ? 'text-violet-400' : 'text-gray-500'}`}>
-              <t.icon className="w-5 h-5" /><span className="text-xs mt-1">{t.label}</span>
+            <button key={t.id} onClick={() => setTab(t.id)} className={`flex flex-col items-center p-1.5 ${tab === t.id ? 'text-violet-400' : 'text-gray-500'}`}>
+              <t.icon className="w-5 h-5" /><span className="text-[10px] mt-0.5">{t.label}</span>
             </button>
           ))}
         </div>
@@ -627,13 +747,68 @@ export default function App() {
   );
 }
 
-function Dashboard({ history, cardioHistory, resetData, storageStatus }) {
+function Dashboard({ history, cardioHistory, resetData, storageStatus, bodyWeight, setBodyWeight }) {
   const totalVol = history.reduce((a, h) => a + h.sets.reduce((s, x) => s + x.w * x.r, 0), 0);
   const prs = {}; history.forEach(h => { const m = Math.max(...h.sets.map(s => s.w)); if (!prs[h.exercise] || m > prs[h.exercise]) prs[h.exercise] = m; });
   const weekVol = [12500, 14200, 13800, 15600, 14900, 16200, 15800];
   const maxV = Math.max(...weekVol);
   const totalCardioMiles = cardioHistory.reduce((a, c) => a + (c.unit === 'mi' ? c.distance : c.distance * 0.000621), 0);
   const totalCardioMins = cardioHistory.reduce((a, c) => a + c.duration, 0);
+  const [weightInput, setWeightInput] = useState('');
+  const [calMonth, setCalMonth] = useState(new Date());
+  const [selectedDay, setSelectedDay] = useState(null);
+
+  // Calendar helpers
+  const year = calMonth.getFullYear();
+  const month = calMonth.getMonth();
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const monthName = calMonth.toLocaleString('default', { month: 'long', year: 'numeric' });
+
+  const workoutDates = {};
+  history.forEach(h => { workoutDates[h.date] = workoutDates[h.date] || {}; workoutDates[h.date].strength = true; });
+  cardioHistory.forEach(c => { workoutDates[c.date] = workoutDates[c.date] || {}; workoutDates[c.date].cardio = true; });
+
+  const calDays = [];
+  for (let i = 0; i < firstDay; i++) calDays.push(null);
+  for (let d = 1; d <= daysInMonth; d++) calDays.push(d);
+
+  const fmtDate = (d) => `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+
+  const dayWorkouts = selectedDay ? {
+    strength: history.filter(h => h.date === fmtDate(selectedDay)),
+    cardio: cardioHistory.filter(c => c.date === fmtDate(selectedDay))
+  } : null;
+
+  const logWeight = () => {
+    const w = parseFloat(weightInput);
+    if (!w) return;
+    setBodyWeight([{ date: new Date().toISOString().split('T')[0], weight: w, unit: 'lbs' }, ...bodyWeight]);
+    setWeightInput('');
+  };
+
+  const exportCSV = () => {
+    // Strength CSV
+    let csv = 'Date,Exercise,Set,Weight(lbs),Reps,RPE\n';
+    history.forEach(h => h.sets.forEach((s, i) => {
+      csv += `${h.date},${h.exercise},${i+1},${s.w},${s.r},${s.rpe || ''}\n`;
+    }));
+    const blob1 = new Blob([csv], { type: 'text/csv' });
+    const a1 = document.createElement('a');
+    a1.href = URL.createObjectURL(blob1);
+    a1.download = 'iron-intelligence-strength.csv';
+    a1.click();
+    // Cardio CSV
+    let csv2 = 'Date,Type,Name,Distance,Unit,Duration(min),HR,Load,Notes\n';
+    cardioHistory.forEach(c => {
+      csv2 += `${c.date},${c.type},${c.name || ''},${c.distance || ''},${c.unit || ''},${c.duration},${c.hr || ''},${c.load || ''},${(c.notes || '').replace(/,/g, ';')}\n`;
+    });
+    const blob2 = new Blob([csv2], { type: 'text/csv' });
+    const a2 = document.createElement('a');
+    a2.href = URL.createObjectURL(blob2);
+    a2.download = 'iron-intelligence-cardio.csv';
+    a2.click();
+  };
 
   return (
     <div className="p-4 space-y-4">
@@ -678,6 +853,77 @@ function Dashboard({ history, cardioHistory, resetData, storageStatus }) {
           <p className="text-2xl font-bold">{totalCardioMins} <span className="text-sm font-normal text-gray-500">min</span></p>
         </div>
       </div>
+
+      {/* Body Weight */}
+      <div className="bg-gray-900 rounded-xl p-4 border border-gray-800">
+        <h3 className="text-sm text-gray-400 mb-3 flex items-center gap-2"><Scale className="w-4 h-4" />Body Weight</h3>
+        <div className="flex gap-2 mb-3">
+          <input type="number" step="0.1" value={weightInput} onChange={e => setWeightInput(e.target.value)} placeholder="Weight (lbs)" className="flex-1 bg-gray-800 rounded-lg p-2 text-sm" />
+          <button onClick={logWeight} className="bg-violet-600 rounded-lg px-4 py-2 text-sm font-medium">Log</button>
+        </div>
+        {bodyWeight.length > 0 && (
+          <div className="space-y-1">
+            {bodyWeight.slice(0, 5).map((bw, i) => (
+              <div key={i} className="flex justify-between text-sm">
+                <span className="text-gray-500">{bw.date}</span>
+                <span className="font-medium">{bw.weight} {bw.unit}</span>
+              </div>
+            ))}
+            {bodyWeight.length > 1 && (
+              <div className={`text-xs mt-2 ${bodyWeight[0].weight < bodyWeight[1].weight ? 'text-emerald-400' : bodyWeight[0].weight > bodyWeight[1].weight ? 'text-amber-400' : 'text-gray-400'}`}>
+                {bodyWeight[0].weight < bodyWeight[1].weight ? '↓' : bodyWeight[0].weight > bodyWeight[1].weight ? '↑' : '→'} {Math.abs(bodyWeight[0].weight - bodyWeight[1].weight).toFixed(1)} lbs since last
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Workout Calendar */}
+      <div className="bg-gray-900 rounded-xl p-4 border border-gray-800">
+        <div className="flex justify-between items-center mb-3">
+          <button onClick={() => setCalMonth(new Date(year, month - 1, 1))} className="text-gray-400 p-1"><ChevronLeft className="w-4 h-4" /></button>
+          <h3 className="text-sm font-medium">{monthName}</h3>
+          <button onClick={() => setCalMonth(new Date(year, month + 1, 1))} className="text-gray-400 p-1"><ChevronRight className="w-4 h-4" /></button>
+        </div>
+        <div className="grid grid-cols-7 gap-1 text-center mb-1">
+          {['S','M','T','W','T','F','S'].map((d,i) => <span key={i} className="text-xs text-gray-600">{d}</span>)}
+        </div>
+        <div className="grid grid-cols-7 gap-1">
+          {calDays.map((d, i) => {
+            if (!d) return <div key={i} />;
+            const dateStr = fmtDate(d);
+            const info = workoutDates[dateStr];
+            return (
+              <button key={i} onClick={() => setSelectedDay(selectedDay === d ? null : d)} className={`aspect-square rounded-lg flex flex-col items-center justify-center text-xs relative ${selectedDay === d ? 'bg-violet-600' : info ? 'bg-gray-800' : ''}`}>
+                {d}
+                {info && (
+                  <div className="flex gap-0.5 mt-0.5">
+                    {info.strength && <div className="w-1 h-1 rounded-full bg-violet-400" />}
+                    {info.cardio && <div className="w-1 h-1 rounded-full bg-emerald-400" />}
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+        {selectedDay && dayWorkouts && (
+          <div className="mt-3 pt-3 border-t border-gray-800 space-y-2">
+            <p className="text-xs text-gray-400 font-medium">{fmtDate(selectedDay)}</p>
+            {dayWorkouts.strength.map((h, i) => (
+              <div key={'s'+i} className="text-xs bg-violet-900/20 rounded-lg p-2 border border-violet-600/20">
+                <span className="text-violet-400 font-medium">{h.exercise}</span> — {h.sets.map(s => `${s.w}×${s.r}`).join(', ')}
+              </div>
+            ))}
+            {dayWorkouts.cardio.map((c, i) => (
+              <div key={'c'+i} className="text-xs bg-emerald-900/20 rounded-lg p-2 border border-emerald-600/20">
+                <span className="text-emerald-400 font-medium">{c.name || c.type}</span> — {c.distance > 0 ? `${c.distance} ${c.unit}, ` : ''}{c.duration} min
+              </div>
+            ))}
+            {dayWorkouts.strength.length === 0 && dayWorkouts.cardio.length === 0 && <p className="text-xs text-gray-600">Rest day</p>}
+          </div>
+        )}
+      </div>
+
       <div className="bg-gray-900 rounded-xl p-4 border border-gray-800">
         <h3 className="text-sm text-gray-400 mb-3">Weekly Volume</h3>
         <div className="flex items-end gap-1 h-20">
@@ -705,13 +951,13 @@ function Dashboard({ history, cardioHistory, resetData, storageStatus }) {
           <div key={i} className="flex justify-between py-2 border-b border-gray-800 last:border-0">
             <div>
               <p className="text-sm font-medium flex items-center gap-2">
-                <span>{c.type === 'run' ? '🏃' : c.type === 'bike' ? '🚴' : c.type === 'ruck' ? '🎒' : '💪'}</span>
+                <span>{c.type === 'run' ? '🏃' : c.type === 'bike' ? '🚴' : c.type === 'ruck' ? '🎒' : c.type === 'swim' ? '🏊' : c.type === 'hike' ? '🥾' : c.type === 'row' ? '🚣' : '💪'}</span>
                 {c.name}
               </p>
               <p className="text-xs text-gray-500">{c.date}</p>
             </div>
             <div className="text-right">
-              <p className="text-emerald-400 font-medium">{c.distance} {c.unit}</p>
+              {c.distance > 0 && <p className="text-emerald-400 font-medium">{c.distance} {c.unit}</p>}
               <p className="text-xs text-gray-500">{c.duration} min</p>
             </div>
           </div>
@@ -721,7 +967,10 @@ function Dashboard({ history, cardioHistory, resetData, storageStatus }) {
       {/* Settings Section */}
       <div className="bg-gray-900 rounded-xl p-4 border border-gray-800">
         <h3 className="text-sm text-gray-400 mb-3">Settings</h3>
-        <button 
+        <button onClick={exportCSV} className="w-full bg-violet-600/20 text-violet-400 rounded-lg p-3 border border-violet-600/30 text-sm mb-2 flex items-center justify-center gap-2">
+          <Download className="w-4 h-4" />Export Data to CSV
+        </button>
+        <button
           onClick={resetData}
           className="w-full bg-red-600/20 text-red-400 rounded-lg p-3 border border-red-600/30 text-sm"
         >
@@ -733,7 +982,7 @@ function Dashboard({ history, cardioHistory, resetData, storageStatus }) {
   );
 }
 
-function WorkoutLogger({ workout, setWorkout, history, setHistory, restTimer, setRestTimer, restSec, setRestSec }) {
+function WorkoutLogger({ workout, setWorkout, history, setHistory, restTimer, setRestTimer, restSec, setRestSec, customExercises = [] }) {
   const [curEx, setCurEx] = useState(null);
   const [sets, setSets] = useState([]);
   const [showList, setShowList] = useState(false);
@@ -886,7 +1135,7 @@ function WorkoutLogger({ workout, setWorkout, history, setHistory, restTimer, se
           <div className="bg-gray-900 w-full rounded-t-2xl max-h-[80vh] overflow-y-auto">
             <div className="sticky top-0 bg-gray-900 p-4 border-b border-gray-800 flex justify-between"><h3 className="font-bold">Select Exercise</h3><button onClick={() => setShowList(false)}><X className="w-5 h-5" /></button></div>
             <div className="p-4 space-y-2">
-              {allExercises.map(ex => (
+              {[...allExercises, ...customExercises].map(ex => (
                 <button key={ex.id} onClick={() => {setCurEx(ex);setSets([{weight:135,reps:8,rpe:7}]);setShowList(false);}} className="w-full text-left p-3 bg-gray-800 rounded-lg">
                   <p className="font-medium">{ex.name}</p><p className="text-xs text-gray-500">{ex.muscles.join(', ')}</p>
                 </button>
@@ -967,6 +1216,14 @@ function CardioLogger({ cardioHistory, setCardioHistory }) {
     { id: 'walk', name: 'Walk', icon: '🚶', fields: ['distance', 'duration', 'hr'] },
     { id: 'ruck', name: 'Ruck', icon: '🎒', fields: ['distance', 'duration', 'load', 'hr'] },
     { id: 'bike', name: 'Bike', icon: '🚴', fields: ['distance', 'duration', 'hr'] },
+    { id: 'swim', name: 'Swim', icon: '🏊', fields: ['distance', 'duration', 'hr'] },
+    { id: 'row', name: 'Row', icon: '🚣', fields: ['distance', 'duration', 'hr'] },
+    { id: 'elliptical', name: 'Elliptical', icon: '🏋️', fields: ['duration', 'hr'] },
+    { id: 'stairs', name: 'Stairs', icon: '🪜', fields: ['duration', 'hr'] },
+    { id: 'hike', name: 'Hike', icon: '🥾', fields: ['distance', 'duration', 'hr'] },
+    { id: 'ski', name: 'Ski/Erg', icon: '⛷️', fields: ['distance', 'duration', 'hr'] },
+    { id: 'jumprope', name: 'Jump Rope', icon: '🪢', fields: ['duration', 'hr'] },
+    { id: 'sports', name: 'Sports', icon: '⚽', fields: ['duration', 'hr'] },
   ];
 
   useEffect(() => {
@@ -1025,7 +1282,7 @@ function CardioLogger({ cardioHistory, setCardioHistory }) {
       <div className="bg-gray-900 rounded-xl p-4 border border-gray-800">
         <h3 className="font-medium mb-3">Quick Start</h3>
         <div className="grid grid-cols-4 gap-2">
-          {cardioTypes.map(t => (<button key={t.id} onClick={() => startLiveSession(t.id)} className="bg-gradient-to-br from-emerald-600/20 to-teal-600/20 border border-emerald-600/30 rounded-xl p-4 text-center"><p className="text-2xl">{t.icon}</p><p className="text-xs mt-1 text-gray-300">{t.name}</p></button>))}
+          {cardioTypes.map(t => (<button key={t.id} onClick={() => startLiveSession(t.id)} className="bg-gradient-to-br from-emerald-600/20 to-teal-600/20 border border-emerald-600/30 rounded-xl p-3 text-center"><p className="text-2xl">{t.icon}</p><p className="text-xs mt-1 text-gray-300">{t.name}</p></button>))}
         </div>
       </div>
       <button onClick={() => setLogging(true)} className="w-full bg-gray-900 border-2 border-dashed border-gray-700 rounded-xl p-4 flex items-center justify-center gap-2 text-gray-400"><Plus className="w-5 h-5" />Log Cardio Manually</button>
@@ -1039,6 +1296,116 @@ function CardioLogger({ cardioHistory, setCardioHistory }) {
                 <div className="flex items-center gap-2"><span className="text-xl">{type?.icon || '💪'}</span><div><p className="font-medium">{c.name}</p><p className="text-xs text-gray-500">{c.date}</p></div></div>
                 <div className="text-right">{c.distance > 0 && <p className="text-emerald-400 font-bold">{c.distance} {c.unit}</p>}<p className="text-xs text-gray-400">{c.duration} min</p></div>
               </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function ExerciseLibrary({ history, onStartWorkout, customExercises, setCustomExercises }) {
+  const [search, setSearch] = useState('');
+  const [category, setCategory] = useState('All');
+  const [expanded, setExpanded] = useState(null);
+  const [showCreate, setShowCreate] = useState(false);
+  const [newEx, setNewEx] = useState({ name: '', muscles: '', category: 'chest', type: 'strength' });
+
+  const merged = [...allExercises, ...customExercises];
+  const filtered = merged.filter(ex => {
+    const matchCat = category === 'All' || ex.category === category.toLowerCase();
+    const q = search.toLowerCase();
+    const matchSearch = !q || ex.name.toLowerCase().includes(q) || ex.muscles.some(m => m.toLowerCase().includes(q));
+    return matchCat && matchSearch;
+  });
+
+  const getPR = (exName) => {
+    let max = 0;
+    history.forEach(h => {
+      if (h.exercise === exName) h.sets.forEach(s => { if (s.w > max) max = s.w; });
+    });
+    return max || null;
+  };
+
+  const getLastDate = (exName) => {
+    const entry = history.find(h => h.exercise === exName);
+    return entry?.date || null;
+  };
+
+  const saveCustom = () => {
+    if (!newEx.name.trim()) return;
+    const id = 'custom-' + Date.now();
+    const muscles = newEx.muscles.split(',').map(m => m.trim()).filter(Boolean);
+    setCustomExercises([...customExercises, { id, name: newEx.name.trim(), muscles, type: newEx.type, category: newEx.category }]);
+    setNewEx({ name: '', muscles: '', category: 'chest', type: 'strength' });
+    setShowCreate(false);
+  };
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="relative">
+        <Search className="absolute left-3 top-3 w-4 h-4 text-gray-500" />
+        <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search exercises or muscles..." className="w-full bg-gray-900 border border-gray-800 rounded-xl pl-10 pr-4 py-3 text-sm" />
+      </div>
+      <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4">
+        {exerciseCategories.map(c => (
+          <button key={c} onClick={() => setCategory(c)} className={`px-3 py-1.5 rounded-full text-xs whitespace-nowrap ${category === c ? 'bg-violet-600' : 'bg-gray-800 text-gray-400'}`}>{c}</button>
+        ))}
+      </div>
+      <div className="flex justify-between items-center">
+        <p className="text-xs text-gray-500">{filtered.length} exercises</p>
+        <button onClick={() => setShowCreate(true)} className="text-xs bg-violet-600/20 text-violet-400 px-3 py-1.5 rounded-lg border border-violet-600/30 flex items-center gap-1"><Plus className="w-3 h-3" />Custom</button>
+      </div>
+      {showCreate && (
+        <div className="bg-gray-900 rounded-xl p-4 border border-violet-600/50 space-y-3">
+          <div className="flex justify-between"><h4 className="font-bold text-sm">Create Exercise</h4><button onClick={() => setShowCreate(false)}><X className="w-4 h-4" /></button></div>
+          <input type="text" value={newEx.name} onChange={e => setNewEx({...newEx, name: e.target.value})} placeholder="Exercise name" className="w-full bg-gray-800 rounded-lg p-2 text-sm" />
+          <input type="text" value={newEx.muscles} onChange={e => setNewEx({...newEx, muscles: e.target.value})} placeholder="Muscles (comma separated)" className="w-full bg-gray-800 rounded-lg p-2 text-sm" />
+          <div className="flex gap-2">
+            <select value={newEx.category} onChange={e => setNewEx({...newEx, category: e.target.value})} className="flex-1 bg-gray-800 rounded-lg p-2 text-sm">
+              {exerciseCategories.filter(c => c !== 'All').map(c => <option key={c} value={c.toLowerCase()}>{c}</option>)}
+            </select>
+            <select value={newEx.type} onChange={e => setNewEx({...newEx, type: e.target.value})} className="flex-1 bg-gray-800 rounded-lg p-2 text-sm">
+              <option value="strength">Strength</option><option value="hypertrophy">Hypertrophy</option><option value="conditioning">Conditioning</option><option value="mobility">Mobility</option>
+            </select>
+          </div>
+          <button onClick={saveCustom} className="w-full bg-violet-600 rounded-lg p-2 text-sm font-medium">Save Exercise</button>
+        </div>
+      )}
+      <div className="space-y-2">
+        {filtered.map(ex => {
+          const pr = getPR(ex.name);
+          const lastDate = getLastDate(ex.name);
+          const isExpanded = expanded === ex.id;
+          const exHistory = history.filter(h => h.exercise === ex.name);
+          return (
+            <div key={ex.id} className="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+              <button onClick={() => setExpanded(isExpanded ? null : ex.id)} className="w-full text-left p-3 flex justify-between items-center">
+                <div className="flex-1">
+                  <p className="font-medium text-sm">{ex.name}</p>
+                  <p className="text-xs text-gray-500">{ex.muscles.join(', ')}</p>
+                </div>
+                <div className="text-right flex items-center gap-3">
+                  {pr && <span className="text-xs text-violet-400 font-medium">PR: {pr}lb</span>}
+                  {lastDate && <span className="text-xs text-gray-500">{lastDate}</span>}
+                  <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                </div>
+              </button>
+              {isExpanded && (
+                <div className="px-3 pb-3 border-t border-gray-800 pt-2 space-y-2">
+                  <span className="text-xs bg-gray-800 px-2 py-0.5 rounded-full">{ex.category}</span>
+                  <span className="text-xs bg-gray-800 px-2 py-0.5 rounded-full ml-1">{ex.type}</span>
+                  {exHistory.length > 0 ? (
+                    <div className="space-y-1 mt-2">
+                      <p className="text-xs text-gray-400 font-medium">Recent History</p>
+                      {exHistory.slice(0, 3).map((h, i) => (
+                        <p key={i} className="text-xs text-gray-500">{h.date} — {h.sets.map(s => `${s.w}×${s.r}`).join(', ')}</p>
+                      ))}
+                    </div>
+                  ) : <p className="text-xs text-gray-600 mt-1">No history yet</p>}
+                  <button onClick={() => onStartWorkout(ex)} className="w-full mt-2 bg-gradient-to-r from-violet-600 to-indigo-600 rounded-lg p-2 text-sm font-medium flex items-center justify-center gap-2"><Play className="w-4 h-4" />Start Workout</button>
+                </div>
+              )}
             </div>
           );
         })}
