@@ -841,7 +841,7 @@ export default function App() {
           <div className="text-center">
             <Dumbbell className="w-16 h-16 mx-auto mb-4 text-violet-400" />
             <h1 className="text-3xl font-bold">Iron Intelligence</h1>
-            <p className="text-gray-400 mt-1">GBRS Performance System</p>
+            <p className="text-gray-400 mt-1">Performance System</p>
           </div>
           <div className="bg-gray-900 rounded-2xl p-6 border border-gray-800 space-y-4">
             <h2 className="font-bold text-center">Sign In</h2>
@@ -879,7 +879,7 @@ export default function App() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Dumbbell className="w-8 h-8" />
-            <div><h1 className="text-xl font-bold">Iron Intelligence</h1><p className="text-violet-200 text-sm">GBRS Performance System</p></div>
+            <div><h1 className="text-xl font-bold">Iron Intelligence</h1><p className="text-violet-200 text-sm">Performance System</p></div>
           </div>
           <div className="flex items-center gap-2">
             {storageStatus === 'saved' && <div className="w-2 h-2 bg-green-400 rounded-full" title="Data saved" />}
@@ -1151,11 +1151,11 @@ function WorkoutLogger({ workout, setWorkout, history, addHistory, setHistory, r
   const fmt = s => `${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}`;
   
   const addSet = () => { const l = sets[sets.length-1] || {weight:135,reps:8,rpe:7}; setSets([...sets, {...l}]); };
-  const upSet = (i, f, v) => { const n = [...sets]; n[i][f] = Number(v); setSets(n); };
+  const upSet = (i, f, v) => { const n = [...sets]; n[i][f] = v === '' ? '' : Number(v); setSets(n); };
   
   const logEx = () => { 
     if (curEx && sets.length) { 
-      addHistory({date: new Date().toISOString().split('T')[0], exercise: curEx.name || curEx.exercise, sets: sets.map(s => ({w:s.weight,r:s.reps,rpe:s.rpe}))});
+      addHistory({date: new Date().toISOString().split('T')[0], exercise: curEx.name || curEx.exercise, sets: sets.map(s => ({w:Number(s.weight)||0,r:Number(s.reps)||0,rpe:Number(s.rpe)||0}))});
       if (workout?.exercises) {
         const updated = {...workout};
         updated.exercises[workout.currentExerciseIndex].completed = true;
@@ -1164,7 +1164,9 @@ function WorkoutLogger({ workout, setWorkout, history, addHistory, setHistory, r
         if (nextIndex !== -1) updated.currentExerciseIndex = nextIndex;
         setWorkout(updated);
       }
-      setCurEx(null); setSets([]); 
+      setCurEx(null); setSets([]);
+      // In free-form mode, show exercise picker again for next exercise
+      if (!workout?.exercises) setShowList(true);
     }
   };
 
