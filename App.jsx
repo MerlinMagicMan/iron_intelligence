@@ -1148,14 +1148,29 @@ function WorkoutLogger({ workout, setWorkout, history, addHistory, setHistory, r
   const [curEx, setCurEx] = useState(null);
   const [sets, setSets] = useState([]);
   const [showList, setShowList] = useState(false);
+  const [sessionExercises, setSessionExercises] = useState([]); // Track exercises logged this session
+  const [exSearch, setExSearch] = useState('');
+  const [exCategory, setExCategory] = useState('All');
   const fmt = s => `${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}`;
-  
+
   const addSet = () => { const l = sets[sets.length-1] || {weight:135,reps:8,rpe:7}; setSets([...sets, {...l}]); };
   const upSet = (i, f, v) => { const n = [...sets]; n[i][f] = v === '' ? '' : Number(v); setSets(n); };
+
+  // Filter exercises for the modal
+  const allEx = [...allExercises, ...customExercises];
+  const filteredEx = allEx.filter(ex => {
+    const matchCat = exCategory === 'All' || ex.category === exCategory.toLowerCase();
+    const q = exSearch.toLowerCase();
+    const matchSearch = !q || ex.name.toLowerCase().includes(q) || ex.muscles?.some(m => m.toLowerCase().includes(q));
+    return matchCat && matchSearch;
+  });
   
-  const logEx = () => { 
-    if (curEx && sets.length) { 
-      addHistory({date: new Date().toISOString().split('T')[0], exercise: curEx.name || curEx.exercise, sets: sets.map(s => ({w:Number(s.weight)||0,r:Number(s.reps)||0,rpe:Number(s.rpe)||0}))});
+  const logEx = () => {
+    if (curEx && sets.length) {
+      const logged = {date: new Date().toISOString().split('T')[0], exercise: curEx.name || curEx.exercise, sets: sets.map(s => ({w:Number(s.weight)||0,r:Number(s.reps)||0,rpe:Number(s.rpe)||0}))};
+      addHistory(logged);
+      // Track in session for display
+      setSessionExercises(prev => [...prev, { name: curEx.name || curEx.exercise, sets: sets.map(s => ({w:Number(s.weight)||0,r:Number(s.reps)||0})) }]);
       if (workout?.exercises) {
         const updated = {...workout};
         updated.exercises[workout.currentExerciseIndex].completed = true;
@@ -1168,6 +1183,14 @@ function WorkoutLogger({ workout, setWorkout, history, addHistory, setHistory, r
       // In free-form mode, show exercise picker again for next exercise
       if (!workout?.exercises) setShowList(true);
     }
+  };
+
+  // Clear session exercises when workout ends
+  const endWorkout = () => {
+    setWorkout(null);
+    setSessionExercises([]);
+    setCurEx(null);
+    setSets([]);
   };
 
   const startProgramExercise = (exercise, index) => {
@@ -1220,7 +1243,7 @@ function WorkoutLogger({ workout, setWorkout, history, addHistory, setHistory, r
               <button onClick={() => {setCurEx(null);setSets([]);}}><X className="w-5 h-5" /></button>
             </div>
             <div className="space-y-2 mb-4">
-              <div className="grid grid-cols-4 gap-2 text-xs text-gray-500 px-2"><span>Set</span><span>Weight</span><span>Reps</span><span>RPE</span></div>
+              <div className="grid grid-cols-4 gap-2 text-xs text-gray-500 px-2"><span>Set</span><span>Weight</span><span>Reps</span><span>Difficulty</span></div>
               {sets.map((s,i) => (
                 <div key={i} className="grid grid-cols-4 gap-2 items-center">
                   <span className="text-center font-medium">{i+1}</span>
@@ -1265,6 +1288,22 @@ function WorkoutLogger({ workout, setWorkout, history, addHistory, setHistory, r
 
   return (
     <div className="p-4 space-y-4">
+      {/* Session summary - show logged exercises */}
+      {sessionExercises.length > 0 && (
+        <div className="bg-gray-900 rounded-xl p-4 border border-gray-800">
+          <h3 className="text-sm text-gray-400 mb-2">This Workout</h3>
+          <div className="space-y-2">
+            {sessionExercises.map((ex, i) => (
+              <div key={i} className="bg-green-900/20 rounded-lg p-2 border border-green-600/20">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-green-400">{ex.name}</span>
+                  <span className="text-xs text-gray-400">{ex.sets.map(s => `${s.w}×${s.r}`).join(', ')}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       {restTimer && (
         <div className="bg-amber-600 rounded-xl p-4 flex justify-between items-center">
           <div className="flex items-center gap-3"><Timer className="w-6 h-6" /><div><p className="text-sm opacity-80">Rest</p><p className="text-2xl font-mono font-bold">{fmt(restSec)}</p></div></div>
@@ -1273,18 +1312,22 @@ function WorkoutLogger({ workout, setWorkout, history, addHistory, setHistory, r
       )}
       {curEx ? (
         <div className="bg-gray-900 rounded-xl p-4 border border-gray-800">
-          <div className="flex justify-between mb-4"><div><h3 className="font-bold text-lg">{curEx.name}</h3><p className="text-sm text-gray-500">{curEx.muscles.join(', ')}</p></div><button onClick={() => {setCurEx(null);setSets([]);}}><X className="w-5 h-5" /></button></div>
+          <div className="flex justify-between mb-4"><div><h3 className="font-bold text-lg">{curEx.name}</h3><p className="text-sm text-gray-500">{curEx.muscles?.join(', ')}</p></div><button onClick={() => {setCurEx(null);setSets([]);}}><X className="w-5 h-5" /></button></div>
           <div className="space-y-2 mb-4">
-            <div className="grid grid-cols-4 gap-2 text-xs text-gray-500 px-2"><span>Set</span><span>Weight</span><span>Reps</span><span>RPE</span></div>
+            <div className="grid grid-cols-4 gap-2 text-xs text-gray-500 px-2">
+              <span>Set</span><span>Weight</span><span>Reps</span>
+              <span className="flex items-center gap-1">Difficulty <span className="text-gray-600 text-[10px]">(1-10)</span></span>
+            </div>
             {sets.map((s,i) => (
               <div key={i} className="grid grid-cols-4 gap-2 items-center">
                 <span className="text-center font-medium">{i+1}</span>
-                <input type="number" value={s.weight} onChange={e => upSet(i,'weight',e.target.value)} className="bg-gray-800 rounded-lg p-2 text-center w-full" />
+                <input type="number" value={s.weight} onChange={e => upSet(i,'weight',e.target.value)} className="bg-gray-800 rounded-lg p-2 text-center w-full" placeholder="lbs" />
                 <input type="number" value={s.reps} onChange={e => upSet(i,'reps',e.target.value)} className="bg-gray-800 rounded-lg p-2 text-center w-full" />
-                <input type="number" value={s.rpe} onChange={e => upSet(i,'rpe',e.target.value)} className="bg-gray-800 rounded-lg p-2 text-center w-full" />
+                <input type="number" value={s.rpe} onChange={e => upSet(i,'rpe',e.target.value)} min="1" max="10" className="bg-gray-800 rounded-lg p-2 text-center w-full" />
               </div>
             ))}
           </div>
+          <p className="text-xs text-gray-600 mb-3">Difficulty: 6-7 easy, 8 moderate, 9 hard, 10 max effort</p>
           <div className="flex gap-2">
             <button onClick={addSet} className="flex-1 bg-gray-800 rounded-lg p-3 flex items-center justify-center gap-2"><Plus className="w-4 h-4" />Add Set</button>
             <button onClick={() => {setRestSec(0);setRestTimer(Date.now());}} className="bg-amber-600 rounded-lg p-3"><Timer className="w-5 h-5" /></button>
@@ -1296,19 +1339,33 @@ function WorkoutLogger({ workout, setWorkout, history, addHistory, setHistory, r
       )}
       {showList && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-end">
-          <div className="bg-gray-900 w-full rounded-t-2xl max-h-[80vh] overflow-y-auto">
-            <div className="sticky top-0 bg-gray-900 p-4 border-b border-gray-800 flex justify-between"><h3 className="font-bold">Select Exercise</h3><button onClick={() => setShowList(false)}><X className="w-5 h-5" /></button></div>
-            <div className="p-4 space-y-2">
-              {[...allExercises, ...customExercises].map(ex => (
-                <button key={ex.id} onClick={() => {setCurEx(ex);setSets([{weight:135,reps:8,rpe:7}]);setShowList(false);}} className="w-full text-left p-3 bg-gray-800 rounded-lg">
-                  <p className="font-medium">{ex.name}</p><p className="text-xs text-gray-500">{ex.muscles.join(', ')}</p>
+          <div className="bg-gray-900 w-full rounded-t-2xl max-h-[80vh] overflow-hidden flex flex-col">
+            <div className="sticky top-0 bg-gray-900 p-4 border-b border-gray-800 space-y-3">
+              <div className="flex justify-between"><h3 className="font-bold">Select Exercise</h3><button onClick={() => {setShowList(false);setExSearch('');setExCategory('All');}}><X className="w-5 h-5" /></button></div>
+              <div className="relative">
+                <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-500" />
+                <input type="text" value={exSearch} onChange={e => setExSearch(e.target.value)} placeholder="Search exercises..." className="w-full bg-gray-800 rounded-lg pl-9 pr-3 py-2 text-sm" />
+              </div>
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {exerciseCategories.map(c => (
+                  <button key={c} onClick={() => setExCategory(c)} className={`px-3 py-1 rounded-full text-xs whitespace-nowrap ${exCategory === c ? 'bg-violet-600' : 'bg-gray-800 text-gray-400'}`}>{c}</button>
+                ))}
+              </div>
+            </div>
+            <div className="p-4 space-y-2 overflow-y-auto flex-1">
+              {filteredEx.map(ex => (
+                <button key={ex.id} onClick={() => {setCurEx(ex);setSets([{weight:135,reps:8,rpe:7}]);setShowList(false);setExSearch('');setExCategory('All');}} className="w-full text-left p-3 bg-gray-800 rounded-lg">
+                  <p className="font-medium">{ex.name}</p><p className="text-xs text-gray-500">{ex.muscles?.join(', ')}</p>
                 </button>
               ))}
+              {filteredEx.length === 0 && <p className="text-center text-gray-500 py-4">No exercises found</p>}
             </div>
           </div>
         </div>
       )}
-      <button onClick={() => setWorkout(null)} className="w-full bg-red-600/20 text-red-400 rounded-xl p-4 border border-red-600/30">End Workout</button>
+      <button onClick={endWorkout} className="w-full bg-red-600/20 text-red-400 rounded-xl p-4 border border-red-600/30">
+        {sessionExercises.length > 0 ? 'Finish Workout' : 'End Workout'}
+      </button>
     </div>
   );
 }
@@ -1586,6 +1643,7 @@ function CameraModule() {
   const [feedback, setFeedback] = useState('Select exercise and start camera');
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
+  const streamRef = useRef(null);
 
   const exercises = [
     { id: 'squat', name: 'Squat', icon: '🏋️' },
@@ -1593,22 +1651,40 @@ function CameraModule() {
     { id: 'curl', name: 'Bicep Curl', icon: '💪' },
   ];
 
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop());
+      }
+    };
+  }, []);
+
   const startCamera = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 640, height: 480 } });
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: 640, height: 480 } });
+      streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        videoRef.current.onloadedmetadata = () => {
+          videoRef.current.play();
+        };
         setIsActive(true);
         setFeedback('Camera active - perform reps!');
       }
     } catch (err) {
-      setFeedback('Camera access denied');
+      console.error('Camera error:', err);
+      setFeedback('Camera access denied or not available');
     }
   };
 
   const stopCamera = () => {
-    if (videoRef.current?.srcObject) {
-      videoRef.current.srcObject.getTracks().forEach(t => t.stop());
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop());
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
     }
     setIsActive(false);
     setFeedback('Camera stopped');
@@ -1763,7 +1839,7 @@ function AICoach({ history, cardioHistory }) {
     const context = buildTrainingContext();
     
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
+      const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1828,7 +1904,7 @@ Provide a comprehensive analysis. Return JSON only with this structure:
     }));
 
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
+      const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
